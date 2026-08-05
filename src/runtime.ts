@@ -1,4 +1,7 @@
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+	ExtensionAPI,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { TodoSnapshotPublisher } from "./protocol.ts";
 import {
 	MAX_LIVE_TODOS,
@@ -146,8 +149,10 @@ export class TodoRuntime {
 				error: normalized.reason === "too-long" ? "too-long" : "empty",
 			};
 		}
-		if (this.state.items.length >= MAX_LIVE_TODOS) return { ok: false, error: "capacity" };
-		if (this.state.nextId > MAX_TODO_ID) return { ok: false, error: "id-exhausted" };
+		if (this.state.items.length >= MAX_LIVE_TODOS)
+			return { ok: false, error: "capacity" };
+		if (this.state.nextId > MAX_TODO_ID)
+			return { ok: false, error: "id-exhausted" };
 		const mutation: TodoMutation = {
 			version: 1,
 			op: "add",
@@ -218,7 +223,8 @@ export class TodoRuntime {
 		const generation = this.generation;
 		const sessionId = this.sessionId;
 		queueMicrotask(() => {
-			if (generation !== this.generation || sessionId !== this.sessionId) return;
+			if (generation !== this.generation || sessionId !== this.sessionId)
+				return;
 			this.dispatchScheduled = false;
 			this.tryDispatch(context);
 		});
@@ -230,7 +236,10 @@ export class TodoRuntime {
 		this.tryDispatch(context);
 	}
 
-	private getItemAfterEnsure(id: number, context: ExtensionContext): TodoItem | undefined {
+	private getItemAfterEnsure(
+		id: number,
+		context: ExtensionContext,
+	): TodoItem | undefined {
 		this.ensureContext(context);
 		const item = this.state.items.find((candidate) => candidate.id === id);
 		return item ? copyItem(item) : undefined;
@@ -247,7 +256,9 @@ export class TodoRuntime {
 			return { ok: false, error: "persist-failed" };
 		}
 		if (continueChain) {
-			this.automaticDispatch = this.state.items.some((candidate) => candidate.status === "queued");
+			this.automaticDispatch = this.state.items.some(
+				(candidate) => candidate.status === "queued",
+			);
 			this.preferredDispatchId = undefined;
 		}
 		return { ok: true, value: item };
@@ -290,14 +301,23 @@ export class TodoRuntime {
 	}
 
 	private tryDispatch(context: ExtensionContext): void {
-		if (this.disposed || this.persistenceFault || this.dispatching || !this.automaticDispatch) return;
+		if (
+			this.disposed ||
+			this.persistenceFault ||
+			this.dispatching ||
+			!this.automaticDispatch
+		)
+			return;
 		if (!context.isIdle() || context.hasPendingMessages()) return;
 		if (this.state.items.some((item) => item.status === "active")) return;
-		const item = this.preferredDispatchId === undefined
-			? this.state.items.find((candidate) => candidate.status === "queued")
-			: this.state.items.find(
-				(candidate) => candidate.id === this.preferredDispatchId && candidate.status === "queued",
-			);
+		const item =
+			this.preferredDispatchId === undefined
+				? this.state.items.find((candidate) => candidate.status === "queued")
+				: this.state.items.find(
+						(candidate) =>
+							candidate.id === this.preferredDispatchId &&
+							candidate.status === "queued",
+					);
 		if (!item) {
 			this.automaticDispatch = false;
 			this.preferredDispatchId = undefined;
@@ -317,11 +337,18 @@ export class TodoRuntime {
 			return;
 		}
 		try {
-			this.pi.sendUserMessage(buildTodoDispatchMessage(item), { deliverAs: "followUp" });
+			this.pi.sendUserMessage(buildTodoDispatchMessage(item), {
+				deliverAs: "followUp",
+			});
 		} catch {
-			const requeued = this.commit({ version: 1, op: "requeue", id: item.id }, context);
+			const requeued = this.commit(
+				{ version: 1, op: "requeue", id: item.id },
+				context,
+			);
 			this.automaticDispatch = false;
-			const recoveredStatus = this.state.items.find((candidate) => candidate.id === item.id)?.status;
+			const recoveredStatus = this.state.items.find(
+				(candidate) => candidate.id === item.id,
+			)?.status;
 			let failureMessage = `Could not dispatch todo #${item.id}; it remains ${recoveredStatus ?? "preserved"}. Use /todos to recover.`;
 			if (requeued) {
 				failureMessage = `Could not dispatch todo #${item.id}; it remains queued. Use /todos to retry.`;
@@ -355,8 +382,10 @@ export function todoRuntimeErrorMessage(error: TodoRuntimeError): string {
 		"id-exhausted": "Todo ID limit reached for this session.",
 		"not-found": "Todo ID was not found on the active branch.",
 		"not-queued": "Only queued todos can be dispatched.",
-		"not-active": "Only the active todo can be completed or requeued by the agent.",
-		"active-exists": "Finish, requeue, complete, or delete the active todo first.",
+		"not-active":
+			"Only the active todo can be completed or requeued by the agent.",
+		"active-exists":
+			"Finish, requeue, complete, or delete the active todo first.",
 		"persist-failed": "Todo state could not be persisted.",
 	};
 	return messages[error];

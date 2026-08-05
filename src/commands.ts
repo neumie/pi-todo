@@ -3,12 +3,19 @@ import { showTodoManager } from "./manager.ts";
 import { type TodoRuntime, todoRuntimeErrorMessage } from "./runtime.ts";
 import { MAX_TODO_TEXT_CHARS } from "./text.ts";
 
-export function registerTodoCommands(pi: ExtensionAPI, runtime: TodoRuntime): void {
+export function registerTodoCommands(
+	pi: ExtensionAPI,
+	runtime: TodoRuntime,
+): void {
 	pi.registerCommand("todo", {
-		description: "Queue one small related change without steering the active run",
+		description:
+			"Queue one small related change without steering the active run",
 		handler: (args, ctx) => {
 			if (!args.trim()) {
-				ctx.ui.notify(`Usage: /todo <text> (maximum ${MAX_TODO_TEXT_CHARS} characters)`, "warning");
+				ctx.ui.notify(
+					`Usage: /todo <text> (maximum ${MAX_TODO_TEXT_CHARS} characters)`,
+					"warning",
+				);
 				return Promise.resolve();
 			}
 			const result = runtime.add(args, ctx);
@@ -16,7 +23,10 @@ export function registerTodoCommands(pi: ExtensionAPI, runtime: TodoRuntime): vo
 				ctx.ui.notify(todoRuntimeErrorMessage(result.error), "warning");
 				return Promise.resolve();
 			}
-			ctx.ui.notify(`Queued #${result.value.id} for after current work`, "info");
+			ctx.ui.notify(
+				`Queued #${result.value.id} for after current work`,
+				"info",
+			);
 			runtime.scheduleDispatch(ctx);
 			return Promise.resolve();
 		},

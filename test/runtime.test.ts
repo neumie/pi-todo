@@ -67,7 +67,10 @@ describe("sequential todo dispatch", () => {
 		assert.equal(harness.messages.length, 1);
 
 		harness.idle = false;
-		assert.equal(runtime.add("third during active run", harness.context).ok, true);
+		assert.equal(
+			runtime.add("third during active run", harness.context).ok,
+			true,
+		);
 		assert.equal(runtime.completeActive(1, harness.context).ok, true);
 		assert.equal(harness.messages.length, 1);
 		harness.idle = true;
@@ -128,7 +131,10 @@ describe("sequential todo dispatch", () => {
 		await harness.emitLifecycle("agent_settled");
 		assert.equal(harness.messages.length, 0);
 		assert.equal(runtime.getItem(1)?.status, "queued");
-		assert.deepEqual(harness.entries.slice(-2).map((entry) => mutation(entry)?.op), ["activate", "requeue"]);
+		assert.deepEqual(
+			harness.entries.slice(-2).map((entry) => mutation(entry)?.op),
+			["activate", "requeue"],
+		);
 
 		harness.sendThrows = false;
 		await harness.emitLifecycle("agent_settled");
@@ -173,7 +179,10 @@ describe("sequential todo dispatch", () => {
 		assert.equal(harness.entries.length, 1);
 
 		await harness.emitLifecycle("session_tree", { newLeafId: "same-session" });
-		assert.equal(runtime.add("tree does not clear fault", harness.context).ok, false);
+		assert.equal(
+			runtime.add("tree does not clear fault", harness.context).ok,
+			false,
+		);
 		await harness.emitLifecycle("session_start", { reason: "reload" });
 		const accepted = runtime.add("next stable item", harness.context);
 		assert.equal(accepted.ok, true);
@@ -191,7 +200,10 @@ describe("sequential todo dispatch", () => {
 		await harness.emitLifecycle("agent_settled");
 		assert.equal(harness.messages.length, 0);
 		assert.equal(runtime.getItem(1)?.status, "active");
-		assert.match(harness.notifications.at(-1)?.message ?? "", /automatic dispatch stopped/);
+		assert.match(
+			harness.notifications.at(-1)?.message ?? "",
+			/automatic dispatch stopped/,
+		);
 		await harness.emitLifecycle("agent_settled");
 		assert.equal(harness.messages.length, 0);
 		assert.deepEqual(runtime.requestDispatch(1, harness.context), {
@@ -214,12 +226,18 @@ describe("sequential todo dispatch", () => {
 
 		const requeueCase = await createActive();
 		requeueCase.harness.appendFailureMode = "after";
-		assert.equal(requeueCase.runtime.requeue(1, requeueCase.harness.context).ok, false);
+		assert.equal(
+			requeueCase.runtime.requeue(1, requeueCase.harness.context).ok,
+			false,
+		);
 		assert.equal(requeueCase.runtime.getItem(1)?.status, "queued");
 
 		const completeCase = await createActive();
 		completeCase.harness.appendFailureMode = "after";
-		assert.equal(completeCase.runtime.completeActive(1, completeCase.harness.context).ok, false);
+		assert.equal(
+			completeCase.runtime.completeActive(1, completeCase.harness.context).ok,
+			false,
+		);
 		assert.equal(completeCase.runtime.getItem(1), undefined);
 
 		const deleteHarness = new ExtensionHarness();

@@ -27,14 +27,18 @@ function skipCsi(input: string, start: number): number {
 }
 
 function isBidiControl(code: number): boolean {
-	return code === 0x061c || code === 0x200e || code === 0x200f
-		|| (code >= 0x202a && code <= 0x202e)
-		|| (code >= 0x2066 && code <= 0x2069);
+	return (
+		code === 0x061c ||
+		code === 0x200e ||
+		code === 0x200f ||
+		(code >= 0x202a && code <= 0x202e) ||
+		(code >= 0x2066 && code <= 0x2069)
+	);
 }
 
 function stripHostileControls(input: string): string {
 	let output = "";
-	for (let index = 0; index < input.length;) {
+	for (let index = 0; index < input.length; ) {
 		const character = input[index];
 		const code = input.charCodeAt(index);
 		if (character === ESC) {
@@ -75,7 +79,8 @@ function stripHostileControls(input: string): string {
 
 export function normalizeTodoText(value: unknown): TodoTextResult {
 	if (typeof value !== "string") return { ok: false, reason: "invalid" };
-	if (value.length > MAX_RAW_TEXT_UNITS) return { ok: false, reason: "too-long" };
+	if (value.length > MAX_RAW_TEXT_UNITS)
+		return { ok: false, reason: "too-long" };
 	const text = stripHostileControls(value).replace(/\s+/gu, " ").trim();
 	if (!text) return { ok: false, reason: "empty" };
 	if (Array.from(text).length > MAX_TODO_TEXT_CHARS) {

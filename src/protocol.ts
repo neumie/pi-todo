@@ -43,7 +43,9 @@ export function createTodoSnapshot(
 	sessionId: string,
 ): TodoSnapshotV1 {
 	const ordered = orderedTodos(state);
-	const items = ordered.slice(0, MAX_SNAPSHOT_ITEMS).map(({ status, text }) => ({ status, text }));
+	const items = ordered
+		.slice(0, MAX_SNAPSHOT_ITEMS)
+		.map(({ status, text }) => ({ status, text }));
 	const active = state.items.some((item) => item.status === "active") ? 1 : 0;
 	const queued = state.items.length - active;
 	return {
@@ -106,7 +108,11 @@ export class TodoSnapshotPublisher {
 		try {
 			if (!value || typeof value !== "object" || Array.isArray(value)) return;
 			const request = value as Record<string, unknown>;
-			if (request.version !== TODO_PROTOCOL_VERSION || request.sessionId !== this.sessionId) return;
+			if (
+				request.version !== TODO_PROTOCOL_VERSION ||
+				request.sessionId !== this.sessionId
+			)
+				return;
 			this.publish();
 		} catch {
 			// A malformed optional consumer request cannot affect todo state.
@@ -118,7 +124,12 @@ export class TodoSnapshotPublisher {
 		this.sequence += 1;
 		this.emit(
 			TODO_SNAPSHOT_EVENT,
-			createTodoSnapshot(this.state, this.providerId, this.sequence, this.sessionId),
+			createTodoSnapshot(
+				this.state,
+				this.providerId,
+				this.sequence,
+				this.sessionId,
+			),
 		);
 	}
 }

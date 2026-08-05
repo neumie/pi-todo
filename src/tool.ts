@@ -11,12 +11,17 @@ import { MAX_TODO_ID } from "./state.ts";
 const TodoToolParams = Type.Object(
 	{
 		action: StringEnum(["add", "list", "complete"] as const),
-		text: Type.Optional(Type.String({
-			description: "One small related todo to queue (256 sanitized characters maximum)",
-			maxLength: 4_096,
-		})),
+		text: Type.Optional(
+			Type.String({
+				description:
+					"One small related todo to queue (256 sanitized characters maximum)",
+				maxLength: 4_096,
+			}),
+		),
 		id: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_TODO_ID })),
-		limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_TOOL_LIST_ITEMS })),
+		limit: Type.Optional(
+			Type.Integer({ minimum: 1, maximum: MAX_TOOL_LIST_ITEMS }),
+		),
 	},
 	{ additionalProperties: false },
 );
@@ -57,7 +62,8 @@ export function registerTodoTool(pi: ExtensionAPI, runtime: TodoRuntime): void {
 	pi.registerTool({
 		name: "pi_todo",
 		label: "Pi Todo",
-		description: "Add one bounded small related follow-up, list actionable todos, or complete the current active todo after actually finishing it.",
+		description:
+			"Add one bounded small related follow-up, list actionable todos, or complete the current active todo after actually finishing it.",
 		promptSnippet: "Queue or complete small related follow-up work",
 		promptGuidelines: [
 			"Use pi_todo add only for a clearly additive small related request during ongoing work; keep pursuing the current objective, avoid speculative backlog creation, and act immediately on genuine corrections, stops, or priority changes.",
@@ -72,12 +78,15 @@ export function registerTodoTool(pi: ExtensionAPI, runtime: TodoRuntime): void {
 				);
 				if (list.omitted > 0) lines.push(`... ${list.omitted} more`);
 				return {
-					content: [{
-						type: "text" as const,
-						text: lines.length > 0
-							? `${list.active} active · ${list.queued} queued\n${lines.join("\n")}`
-							: "No actionable todos.",
-					}],
+					content: [
+						{
+							type: "text" as const,
+							text:
+								lines.length > 0
+									? `${list.active} active · ${list.queued} queued\n${lines.join("\n")}`
+									: "No actionable todos.",
+						},
+					],
 					details: details(runtime, "list", true, { limit: params.limit }),
 				};
 			}
@@ -100,7 +109,9 @@ export function registerTodoTool(pi: ExtensionAPI, runtime: TodoRuntime): void {
 				}
 				runtime.scheduleDispatch(ctx);
 				return {
-					content: [{ type: "text" as const, text: `Queued todo #${result.value.id}.` }],
+					content: [
+						{ type: "text" as const, text: `Queued todo #${result.value.id}.` },
+					],
 					details: details(runtime, "add", true, { id: result.value.id }),
 				};
 			}
@@ -117,12 +128,20 @@ export function registerTodoTool(pi: ExtensionAPI, runtime: TodoRuntime): void {
 				const error = todoRuntimeErrorMessage(result.error);
 				return {
 					content: [{ type: "text" as const, text: error }],
-					details: details(runtime, "complete", false, { id: params.id, error }),
+					details: details(runtime, "complete", false, {
+						id: params.id,
+						error,
+					}),
 				};
 			}
 			runtime.scheduleDispatch(ctx);
 			return {
-				content: [{ type: "text" as const, text: `Completed active todo #${params.id}.` }],
+				content: [
+					{
+						type: "text" as const,
+						text: `Completed active todo #${params.id}.`,
+					},
+				],
 				details: details(runtime, "complete", true, { id: params.id }),
 			};
 		},

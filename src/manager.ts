@@ -46,8 +46,16 @@ export class TodoSelectDialog implements Component {
 			1,
 			Math.min(options.items.length, this.maxRows - 5),
 		);
-		this.container.addChild(new DynamicBorder((text: string) => options.theme.fg("accent", text)));
-		this.container.addChild(new Text(options.theme.fg("accent", options.theme.bold(options.title)), 1, 0));
+		this.container.addChild(
+			new DynamicBorder((text: string) => options.theme.fg("accent", text)),
+		);
+		this.container.addChild(
+			new Text(
+				options.theme.fg("accent", options.theme.bold(options.title)),
+				1,
+				0,
+			),
+		);
 		this.selectList = new SelectList(options.items, maxVisible, {
 			selectedPrefix: (text) => options.theme.fg("accent", text),
 			selectedText: (text) => options.theme.fg("accent", text),
@@ -59,16 +67,25 @@ export class TodoSelectDialog implements Component {
 		this.selectList.onCancel = options.onCancel;
 		this.selectList.onSelectionChange = () => options.onRender?.();
 		this.container.addChild(this.selectList);
-		this.container.addChild(new Text(options.theme.fg("dim", "↑↓ navigate · enter select · esc close"), 1, 0));
-		this.container.addChild(new DynamicBorder((text: string) => options.theme.fg("accent", text)));
+		this.container.addChild(
+			new Text(
+				options.theme.fg("dim", "↑↓ navigate · enter select · esc close"),
+				1,
+				0,
+			),
+		);
+		this.container.addChild(
+			new DynamicBorder((text: string) => options.theme.fg("accent", text)),
+		);
 	}
 
 	render(width: number): string[] {
 		const fittedWidth = normalizedSize(width);
 		if (fittedWidth === 0 || this.maxRows === 0) return [];
-		const lines = this.maxRows <= 2
-			? this.selectList.render(fittedWidth)
-			: this.container.render(fittedWidth);
+		const lines =
+			this.maxRows <= 2
+				? this.selectList.render(fittedWidth)
+				: this.container.render(fittedWidth);
 		return lines
 			.slice(0, this.maxRows)
 			.map((line) => truncateToWidth(line, fittedWidth, ""));
@@ -88,16 +105,17 @@ async function select(
 	title: string,
 	items: SelectItem[],
 ): Promise<string | undefined> {
-	return ctx.ui.custom<string | undefined>((tui, theme, _keybindings, done) =>
-		new TodoSelectDialog({
-			title,
-			items,
-			theme,
-			terminalRows: tui.terminal.rows,
-			onSelect: done,
-			onCancel: () => done(undefined),
-			onRender: () => tui.requestRender(),
-		}),
+	return ctx.ui.custom<string | undefined>(
+		(tui, theme, _keybindings, done) =>
+			new TodoSelectDialog({
+				title,
+				items,
+				theme,
+				terminalRows: tui.terminal.rows,
+				onSelect: done,
+				onCancel: () => done(undefined),
+				onRender: () => tui.requestRender(),
+			}),
 	);
 }
 
@@ -113,15 +131,31 @@ function todoChoice(item: TodoItem): SelectItem {
 function actionChoices(item: TodoItem): SelectItem[] {
 	return item.status === "active"
 		? [
-			{ value: "requeue", label: "Requeue", description: "Move back to the queue without dispatching" },
-			{ value: "complete", label: "Complete", description: "Remove from actionable work" },
-			{ value: "delete", label: "Delete", description: "Remove this item" },
-		]
+				{
+					value: "requeue",
+					label: "Requeue",
+					description: "Move back to the queue without dispatching",
+				},
+				{
+					value: "complete",
+					label: "Complete",
+					description: "Remove from actionable work",
+				},
+				{ value: "delete", label: "Delete", description: "Remove this item" },
+			]
 		: [
-			{ value: "dispatch", label: "Dispatch", description: "Send at the next safe idle boundary" },
-			{ value: "complete", label: "Complete", description: "Remove from actionable work" },
-			{ value: "delete", label: "Delete", description: "Remove this item" },
-		];
+				{
+					value: "dispatch",
+					label: "Dispatch",
+					description: "Send at the next safe idle boundary",
+				},
+				{
+					value: "complete",
+					label: "Complete",
+					description: "Remove from actionable work",
+				},
+				{ value: "delete", label: "Delete", description: "Remove this item" },
+			];
 }
 
 function notifyResult(
@@ -163,12 +197,22 @@ export async function showTodoManager(
 		const id = Number(selectedId);
 		const item = runtime.getItem(id);
 		if (!item) continue;
-		const selectedAction = await select(ctx, `Todo #${id}`, actionChoices(item));
+		const selectedAction = await select(
+			ctx,
+			`Todo #${id}`,
+			actionChoices(item),
+		);
 		if (!selectedAction) continue;
 		const action = selectedAction as ManagerAction;
 
 		if (action === "dispatch") {
-			if (notifyResult(ctx, runtime.requestDispatch(id, ctx), `Todo #${id} will dispatch at the next safe boundary.`)) {
+			if (
+				notifyResult(
+					ctx,
+					runtime.requestDispatch(id, ctx),
+					`Todo #${id} will dispatch at the next safe boundary.`,
+				)
+			) {
 				runtime.scheduleDispatch(ctx);
 				return;
 			}
@@ -180,7 +224,14 @@ export async function showTodoManager(
 		}
 		if (action === "complete") {
 			const wasActive = item.status === "active";
-			if (notifyResult(ctx, runtime.completeAny(id, ctx), `Completed todo #${id}.`) && wasActive) {
+			if (
+				notifyResult(
+					ctx,
+					runtime.completeAny(id, ctx),
+					`Completed todo #${id}.`,
+				) &&
+				wasActive
+			) {
 				runtime.scheduleDispatch(ctx);
 				return;
 			}
@@ -192,7 +243,10 @@ export async function showTodoManager(
 		);
 		if (!confirmed) continue;
 		const wasActive = item.status === "active";
-		if (notifyResult(ctx, runtime.delete(id, ctx), `Deleted todo #${id}.`) && wasActive) {
+		if (
+			notifyResult(ctx, runtime.delete(id, ctx), `Deleted todo #${id}.`) &&
+			wasActive
+		) {
 			runtime.scheduleDispatch(ctx);
 			return;
 		}

@@ -20,38 +20,57 @@ export interface TodoState {
 
 export type TodoMutation =
 	| { version: 1; op: "add"; id: number; text: string }
-	| { version: 1; op: "activate" | "requeue" | "complete" | "delete"; id: number };
+	| {
+			version: 1;
+			op: "activate" | "requeue" | "complete" | "delete";
+			id: number;
+	  };
 
 function record(value: unknown): Record<string, unknown> | undefined {
-	if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+	if (value === null || typeof value !== "object" || Array.isArray(value))
+		return undefined;
 	return value as Record<string, unknown>;
 }
 
 function validId(value: unknown): value is number {
-	return Number.isSafeInteger(value) && (value as number) >= 1 && (value as number) <= MAX_TODO_ID;
+	return (
+		Number.isSafeInteger(value) &&
+		(value as number) >= 1 &&
+		(value as number) <= MAX_TODO_ID
+	);
 }
 
-function hasExactKeys(input: Record<string, unknown>, expected: readonly string[]): boolean {
+function hasExactKeys(
+	input: Record<string, unknown>,
+	expected: readonly string[],
+): boolean {
 	const compare = (left: string, right: string) => left.localeCompare(right);
 	const keys = Object.keys(input).sort(compare);
 	const expectedKeys = [...expected].sort(compare);
-	return keys.length === expectedKeys.length
-		&& keys.every((key, index) => key === expectedKeys[index]);
+	return (
+		keys.length === expectedKeys.length &&
+		keys.every((key, index) => key === expectedKeys[index])
+	);
 }
 
 export function parseTodoMutation(value: unknown): TodoMutation | undefined {
 	try {
 		const input = record(value);
-		if (!input || input.version !== TODO_MUTATION_VERSION || !validId(input.id)) return undefined;
+		if (!input || input.version !== TODO_MUTATION_VERSION || !validId(input.id))
+			return undefined;
 		if (input.op === "add") {
-			if (!hasExactKeys(input, ["id", "op", "text", "version"])) return undefined;
+			if (!hasExactKeys(input, ["id", "op", "text", "version"]))
+				return undefined;
 			if (!isCanonicalTodoText(input.text)) return undefined;
 			return { version: 1, op: "add", id: input.id, text: input.text };
 		}
 		if (
-			input.op !== "activate" && input.op !== "requeue"
-			&& input.op !== "complete" && input.op !== "delete"
-		) return undefined;
+			input.op !== "activate" &&
+			input.op !== "requeue" &&
+			input.op !== "complete" &&
+			input.op !== "delete"
+		)
+			return undefined;
 		if (!hasExactKeys(input, ["id", "op", "version"])) return undefined;
 		return { version: 1, op: input.op, id: input.id };
 	} catch {
@@ -62,7 +81,8 @@ export function parseTodoMutation(value: unknown): TodoMutation | undefined {
 function mutationFromEntry(value: unknown): TodoMutation | undefined {
 	try {
 		const entry = record(value);
-		if (entry?.type !== "custom" || entry.customType !== TODO_ENTRY_TYPE) return undefined;
+		if (entry?.type !== "custom" || entry.customType !== TODO_ENTRY_TYPE)
+			return undefined;
 		return parseTodoMutation(entry.data);
 	} catch {
 		return undefined;
@@ -73,14 +93,23 @@ export function emptyTodoState(): TodoState {
 	return { items: [], nextId: 1 };
 }
 
-export function applyTodoMutation(state: TodoState, mutation: TodoMutation): TodoState {
+export function applyTodoMutation(
+	state: TodoState,
+	mutation: TodoMutation,
+): TodoState {
 	if (mutation.op === "add") {
 		const nextId = Math.max(state.nextId, mutation.id + 1);
-		if (state.items.some((item) => item.id === mutation.id) || state.items.length >= MAX_LIVE_TODOS) {
+		if (
+			state.items.some((item) => item.id === mutation.id) ||
+			state.items.length >= MAX_LIVE_TODOS
+		) {
 			return nextId === state.nextId ? state : { ...state, nextId };
 		}
 		return {
-			items: [...state.items, { id: mutation.id, text: mutation.text, status: "queued" }],
+			items: [
+				...state.items,
+				{ id: mutation.id, text: mutation.text, status: "queued" },
+			],
 			nextId,
 		};
 	}
@@ -90,7 +119,10 @@ export function applyTodoMutation(state: TodoState, mutation: TodoMutation): Tod
 	const item = state.items[index];
 	if (!item) return state;
 	if (mutation.op === "activate") {
-		if (item.status !== "queued" || state.items.some((candidate) => candidate.status === "active")) {
+		if (
+			item.status !== "queued" ||
+			state.items.some((candidate) => candidate.status === "active")
+		) {
 			return state;
 		}
 		const items = [...state.items];
@@ -103,7 +135,10 @@ export function applyTodoMutation(state: TodoState, mutation: TodoMutation): Tod
 		items[index] = { ...item, status: "queued" };
 		return { ...state, items };
 	}
-	return { ...state, items: state.items.filter((candidate) => candidate.id !== mutation.id) };
+	return {
+		...state,
+		items: state.items.filter((candidate) => candidate.id !== mutation.id),
+	};
 }
 
 export function reconstructTodoState(

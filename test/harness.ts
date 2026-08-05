@@ -36,12 +36,18 @@ export interface TestTool {
 		signal: AbortSignal | undefined,
 		onUpdate: undefined,
 		context: ExtensionContext,
-	): Promise<{ content: Array<{ type: string; text: string }>; details?: unknown }>;
+	): Promise<{
+		content: Array<{ type: string; text: string }>;
+		details?: unknown;
+	}>;
 }
 
 export class ExtensionHarness {
 	readonly events = new TestEventBus();
-	readonly lifecycle = new Map<string, Array<(event: unknown, context: ExtensionContext) => unknown>>();
+	readonly lifecycle = new Map<
+		string,
+		Array<(event: unknown, context: ExtensionContext) => unknown>
+	>();
 	readonly commands = new Map<string, TestCommand>();
 	readonly tools = new Map<string, TestTool>();
 	readonly entries: unknown[] = [];
@@ -80,7 +86,10 @@ export class ExtensionHarness {
 
 	readonly pi = {
 		events: this.events,
-		on: (event: string, handler: (event: unknown, context: ExtensionContext) => unknown) => {
+		on: (
+			event: string,
+			handler: (event: unknown, context: ExtensionContext) => unknown,
+		) => {
 			const handlers = this.lifecycle.get(event) ?? [];
 			handlers.push(handler);
 			this.lifecycle.set(event, handlers);
@@ -110,7 +119,8 @@ export class ExtensionHarness {
 
 	seed(entries: unknown[], branchEntries: unknown[] = entries): void {
 		this.entries.splice(0, this.entries.length, ...entries);
-		this.branchEntries = branchEntries === entries ? this.entries : [...branchEntries];
+		this.branchEntries =
+			branchEntries === entries ? this.entries : [...branchEntries];
 	}
 
 	async emitLifecycle(event: string, payload: unknown = {}): Promise<void> {

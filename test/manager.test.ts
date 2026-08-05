@@ -30,7 +30,9 @@ describe("TodoSelectDialog", () => {
 			items: items(64),
 			theme,
 			terminalRows: 7,
-			onSelect: (value) => { selected = value; },
+			onSelect: (value) => {
+				selected = value;
+			},
 			onCancel() {},
 		});
 		for (const width of [1, 8, 24, 80]) {
@@ -38,22 +40,28 @@ describe("TodoSelectDialog", () => {
 			assert.ok(lines.length <= 7);
 			assert.ok(lines.every((line) => visibleWidth(line) <= width));
 		}
-		assert.deepEqual(new TodoSelectDialog({
-			title: "Pi todos",
-			items: items(64),
-			theme,
-			terminalRows: 0,
-			onSelect() {},
-			onCancel() {},
-		}).render(20), []);
-		assert.match(new TodoSelectDialog({
-			title: "Pi todos",
-			items: items(64),
-			theme,
-			terminalRows: 1,
-			onSelect() {},
-			onCancel() {},
-		}).render(20)[0] ?? "", /#1/);
+		assert.deepEqual(
+			new TodoSelectDialog({
+				title: "Pi todos",
+				items: items(64),
+				theme,
+				terminalRows: 0,
+				onSelect() {},
+				onCancel() {},
+			}).render(20),
+			[],
+		);
+		assert.match(
+			new TodoSelectDialog({
+				title: "Pi todos",
+				items: items(64),
+				theme,
+				terminalRows: 1,
+				onSelect() {},
+				onCancel() {},
+			}).render(20)[0] ?? "",
+			/#1/,
+		);
 
 		dialog.handleInput("\x1b[B");
 		dialog.handleInput("\x1b[B");
@@ -69,8 +77,12 @@ describe("TodoSelectDialog", () => {
 			items: items(2),
 			theme,
 			terminalRows: 8,
-			onSelect() { throw new Error("must not select"); },
-			onCancel: () => { cancelled = true; },
+			onSelect() {
+				throw new Error("must not select");
+			},
+			onCancel: () => {
+				cancelled = true;
+			},
 		});
 		dialog.handleInput("\x1b");
 		assert.equal(cancelled, true);
@@ -124,9 +136,15 @@ describe("/todos manager actions", () => {
 		const runtime = installPiTodo(harness.pi);
 		await harness.emitLifecycle("session_start", { reason: "startup" });
 		runtime.add("headless item", harness.context);
-		const context = { ...harness.context, mode: "json" } as ExtensionCommandContext;
+		const context = {
+			...harness.context,
+			mode: "json",
+		} as ExtensionCommandContext;
 		await showTodoManager(runtime, context);
-		assert.match(harness.notifications.at(-1)?.message ?? "", /0 active · 1 queued/);
+		assert.match(
+			harness.notifications.at(-1)?.message ?? "",
+			/0 active · 1 queued/,
+		);
 		assert.equal(harness.customResults.length, 0);
 	});
 

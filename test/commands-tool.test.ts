@@ -36,17 +36,50 @@ describe("commands and pi_todo tool", () => {
 		harness.idle = false;
 		const tool = harness.tools.get("pi_todo");
 		assert.ok(tool);
-		assert.match(tool.promptGuidelines?.join("\n") ?? "", /clearly additive.*genuine corrections/s);
-		assert.match(tool.promptGuidelines?.join("\n") ?? "", /avoid speculative backlog/);
+		assert.match(
+			tool.promptGuidelines?.join("\n") ?? "",
+			/clearly additive.*genuine corrections/s,
+		);
+		assert.match(
+			tool.promptGuidelines?.join("\n") ?? "",
+			/avoid speculative backlog/,
+		);
 
-		const added = await tool.execute("add", { action: "add", text: "agent-added item" }, undefined, undefined, harness.context);
+		const added = await tool.execute(
+			"add",
+			{ action: "add", text: "agent-added item" },
+			undefined,
+			undefined,
+			harness.context,
+		);
 		assert.match(added.content[0]?.text ?? "", /Queued todo #1/);
-		await tool.execute("add", { action: "add", text: "second item" }, undefined, undefined, harness.context);
-		const refused = await tool.execute("complete", { action: "complete", id: 1 }, undefined, undefined, harness.context);
+		await tool.execute(
+			"add",
+			{ action: "add", text: "second item" },
+			undefined,
+			undefined,
+			harness.context,
+		);
+		const refused = await tool.execute(
+			"complete",
+			{ action: "complete", id: 1 },
+			undefined,
+			undefined,
+			harness.context,
+		);
 		assert.match(refused.content[0]?.text ?? "", /Only the active todo/);
 
-		const listed = await tool.execute("list", { action: "list", limit: 1 }, undefined, undefined, harness.context);
-		assert.match(listed.content[0]?.text ?? "", /\[queued\] #1: agent-added item/);
+		const listed = await tool.execute(
+			"list",
+			{ action: "list", limit: 1 },
+			undefined,
+			undefined,
+			harness.context,
+		);
+		assert.match(
+			listed.content[0]?.text ?? "",
+			/\[queued\] #1: agent-added item/,
+		);
 		assert.match(listed.content[0]?.text ?? "", /\.\.\. 1 more/);
 		assert.equal((listed.details as { omitted?: number }).omitted, 1);
 		assert.ok((listed.content[0]?.text.length ?? 0) < 5_000);
@@ -55,7 +88,13 @@ describe("commands and pi_todo tool", () => {
 		await harness.emitLifecycle("agent_settled");
 		assert.equal(runtime.getItem(1)?.status, "active");
 		harness.idle = false;
-		const completed = await tool.execute("complete", { action: "complete", id: 1 }, undefined, undefined, harness.context);
+		const completed = await tool.execute(
+			"complete",
+			{ action: "complete", id: 1 },
+			undefined,
+			undefined,
+			harness.context,
+		);
 		assert.match(completed.content[0]?.text ?? "", /Completed active todo #1/);
 		assert.equal(runtime.getItem(1), undefined);
 	});
@@ -68,12 +107,30 @@ describe("commands and pi_todo tool", () => {
 		const tool = harness.tools.get("pi_todo");
 		assert.ok(tool);
 		for (let index = 0; index < MAX_LIVE_TODOS; index += 1) {
-			const result = await tool.execute("add", { action: "add", text: `agent item ${index}` }, undefined, undefined, harness.context);
+			const result = await tool.execute(
+				"add",
+				{ action: "add", text: `agent item ${index}` },
+				undefined,
+				undefined,
+				harness.context,
+			);
 			assert.match(result.content[0]?.text ?? "", /Queued todo/);
 		}
-		const overflow = await tool.execute("add", { action: "add", text: "one too many" }, undefined, undefined, harness.context);
+		const overflow = await tool.execute(
+			"add",
+			{ action: "add", text: "one too many" },
+			undefined,
+			undefined,
+			harness.context,
+		);
 		assert.match(overflow.content[0]?.text ?? "", /queue is full/i);
-		const list = await tool.execute("list", { action: "list", limit: 16 }, undefined, undefined, harness.context);
+		const list = await tool.execute(
+			"list",
+			{ action: "list", limit: 16 },
+			undefined,
+			undefined,
+			harness.context,
+		);
 		assert.match(list.content[0]?.text ?? "", /\.\.\. 48 more/);
 		assert.equal(runtime.allItems().length, MAX_LIVE_TODOS);
 		assert.ok((list.content[0]?.text.length ?? 0) < 6_000);
