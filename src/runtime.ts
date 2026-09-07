@@ -162,7 +162,6 @@ export class TodoRuntime {
 		const committed = this.commit(mutation, context);
 		if (!committed) return { ok: false, error: "persist-failed" };
 		this.automaticDispatch = true;
-		this.preferredDispatchId = undefined;
 		return {
 			ok: true,
 			value: { id: mutation.id, text: mutation.text, status: "queued" },
@@ -254,6 +253,9 @@ export class TodoRuntime {
 		if (this.persistenceFault) return { ok: false, error: "persist-failed" };
 		if (!this.commit({ version: 1, op, id: item.id }, context)) {
 			return { ok: false, error: "persist-failed" };
+		}
+		if (this.preferredDispatchId === item.id) {
+			this.preferredDispatchId = undefined;
 		}
 		if (continueChain) {
 			this.automaticDispatch = this.state.items.some(

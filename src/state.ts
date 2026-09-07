@@ -98,6 +98,8 @@ export function applyTodoMutation(
 	mutation: TodoMutation,
 ): TodoState {
 	if (mutation.op === "add") {
+		// The high-water mark also remembers removed and over-capacity IDs.
+		if (mutation.id < state.nextId) return state;
 		const nextId = Math.max(state.nextId, mutation.id + 1);
 		if (
 			state.items.some((item) => item.id === mutation.id) ||

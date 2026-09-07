@@ -52,6 +52,58 @@ describe("sequential todo dispatch", () => {
 		assert.equal(harness.messages.length, 1);
 	});
 
+	it("keeps an explicit next-item selection when more work arrives", async () => {
+		const harness = new ExtensionHarness();
+		const runtime = installPiTodo(harness.pi);
+		await harness.emitLifecycle("session_start", { reason: "startup" });
+		harness.idle = false;
+		const command = harness.commands.get("todo");
+		assert.ok(command);
+		await command.handler("first", harness.context);
+		await command.handler("second", harness.context);
+		assert.equal(runtime.requestDispatch(2, harness.context).ok, true);
+		await command.handler("third", harness.context);
+		await tick();
+		assert.equal(harness.messages.length, 0);
+
+		harness.idle = true;
+		await harness.emitLifecycle("agent_settled");
+		assert.equal(harness.messages.length, 1);
+		assert.match(harness.messages[0]!.content, /#2: second/);
+
+		harness.idle = false;
+		assert.equal(runtime.completeActive(2, harness.context).ok, true);
+		harness.idle = true;
+		await harness.emitLifecycle("agent_settled");
+		assert.equal(harness.messages.length, 2);
+		assert.match(harness.messages[1]!.content, /#1: first/);
+		assert.equal(runtime.getItem(3)?.status, "queued");
+	});
+
+	it("resumes FIFO when the explicitly selected item is removed", async () => {
+		for (const op of ["complete", "delete"] as const) {
+			const harness = new ExtensionHarness();
+			const runtime = installPiTodo(harness.pi);
+			await harness.emitLifecycle("session_start", { reason: "startup" });
+			harness.idle = false;
+			assert.equal(runtime.add("first", harness.context).ok, true);
+			assert.equal(runtime.add("second", harness.context).ok, true);
+			assert.equal(runtime.requestDispatch(2, harness.context).ok, true);
+			const removed = op === "complete"
+				? runtime.completeAny(2, harness.context)
+				: runtime.delete(2, harness.context);
+			assert.equal(removed.ok, true);
+			assert.equal(runtime.add("third", harness.context).ok, true);
+
+			harness.idle = true;
+			await harness.emitLifecycle("agent_settled");
+			assert.equal(harness.messages.length, 1);
+			assert.match(harness.messages[0]!.content, /#1: first/);
+			assert.equal(runtime.getItem(2), undefined);
+			assert.equal(runtime.getItem(3)?.status, "queued");
+		}
+	});
+
 	it("sends one item at a time and never redispatches an active item", async () => {
 		const harness = new ExtensionHarness();
 		const runtime = installPiTodo(harness.pi);

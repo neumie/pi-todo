@@ -125,12 +125,49 @@ describe("todo state deltas", () => {
 		assert.deepEqual(state.items, [{ id: 1, text: "valid", status: "queued" }]);
 	});
 
+	it("does not resurrect removed work when an add entry is replayed", () => {
+		for (const op of ["complete", "delete"] as const) {
+			const original = entry(add(1, "already handled"));
+			const state = reconstructTodoState([
+				original,
+				entry({ version: 1, op: "activate", id: 1 }),
+				entry({ version: 1, op, id: 1 }),
+				original,
+				entry(add(2, "new work")),
+			]);
+			assert.deepEqual(state, {
+				items: [{ id: 2, text: "new work", status: "queued" }],
+				nextId: 3,
+			});
+		}
+	});
+
 	it("bounds live reconstruction while keeping IDs monotonic", () => {
 		const entries = Array.from({ length: MAX_LIVE_TODOS + 2 }, (_, index) =>
 			entry(add(index + 1)),
 		);
 		const state = reconstructTodoState(entries);
 		assert.equal(state.items.length, MAX_LIVE_TODOS);
+		assert.equal(state.nextId, MAX_LIVE_TODOS + 3);
+	});
+
+	it("does not reuse an over-capacity ID after space is freed", () => {
+		const entries = Array.from({ length: MAX_LIVE_TODOS + 1 }, (_, index) =>
+			entry(add(index + 1)),
+		);
+		const state = reconstructTodoState([
+			...entries,
+			entry({ version: 1, op: "delete", id: 1 }),
+			entry(add(MAX_LIVE_TODOS + 1, "replayed rejected item")),
+			entry(add(MAX_LIVE_TODOS + 2, "new work")),
+		]);
+		assert.equal(state.items.length, MAX_LIVE_TODOS);
+		assert.equal(state.items.some((item) => item.id === MAX_LIVE_TODOS + 1), false);
+		assert.deepEqual(state.items.at(-1), {
+			id: MAX_LIVE_TODOS + 2,
+			text: "new work",
+			status: "queued",
+		});
 		assert.equal(state.nextId, MAX_LIVE_TODOS + 3);
 	});
 
