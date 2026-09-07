@@ -1,6 +1,6 @@
 # @neumie/pi-todo
 
-A private [Pi](https://pi.dev) extension for capturing small related changes without steering the active run.
+A [Pi](https://pi.dev) extension for capturing small related changes without steering the active run.
 
 Pi already has native steering and follow-up input. `pi-todo` does not replace either one. It adds an explicit local queue whose entries stay outside model context until Pi has fully settled.
 
@@ -40,12 +40,13 @@ Only one item is dispatched at a time:
 - No later queued item can dispatch while any item remains active.
 - Completing the active item during a turn allows the next queued item to dispatch only when that run reaches its next `agent_settled` boundary.
 - New items captured during a todo-driven run join the queue tail.
+- An explicit **Dispatch** choice remains the next item even if more todos arrive before the safe boundary. After it completes, ordinary FIFO processing resumes.
 
 The current agent handles these small changes by default. A dispatched item may use already-installed subagent or goal tools when it is substantial and genuinely separable, subject to normal one-writer-per-worktree safety. `pi-todo` itself neither imports nor invokes those packages.
 
 ### Delivery caveat
 
-Pi 0.83.0's extension API exposes `sendUserMessage()` as a synchronous `void` call and reports later asynchronous delivery errors internally. `pi-todo` therefore persists `active` before sending: this provides fail-closed, at-most-once automatic delivery rather than unsafe retries. A synchronous send failure is requeued and automatic retry is disarmed. A process crash or host-level asynchronous failure can leave an unsent item active; recover explicitly with `/todos` → **Requeue**. This avoids both data loss and dispatch loops.
+Pi 0.85.1's extension API exposes `sendUserMessage()` as a synchronous `void` call and reports later asynchronous delivery errors internally. `pi-todo` therefore persists `active` before sending: this provides fail-closed, at-most-once automatic delivery rather than unsafe retries. A synchronous send failure is requeued and automatic retry is disarmed. A process crash or host-level asynchronous failure can leave an unsent item active; recover explicitly with `/todos` → **Requeue**. This avoids both data loss and dispatch loops.
 
 Pi can advance its in-memory session leaf before a custom-entry persistence error becomes observable. If `appendEntry()` throws, `pi-todo` reconstructs from Pi's current branch, republishes that conservative state, disarms dispatch, and refuses further mutations until a fresh session load. This prevents ID reuse or follow-on writes against a possibly unflushed parent chain.
 
@@ -68,11 +69,11 @@ State is session-local and branch-aware:
 - Every mutation is a small versioned `@neumie/pi-todo:v1:mutation` custom entry.
 - Custom entries do not participate in LLM context.
 - `session_start` and `session_tree` reconstruct membership/status from the active branch.
-- Completed history is absent: completion and deletion remove items from actionable state.
+- Completion and deletion remove items from actionable state, not from the underlying session log.
 - IDs increase monotonically within the current session file. The allocator scans valid `add` entries across that file, so navigating backward and creating a sibling branch does not reuse an ID. A fork carries the selected branch's IDs and continues from its copied high-water mark.
 - Malformed, old-version, foreign, oversized, duplicate, over-capacity, or impossible-transition entries are ignored safely.
 
-Historical queued items remain visible but do not auto-dispatch merely because a session was started, resumed, reloaded, forked, or navigated with `/tree`. Re-enable processing by explicitly choosing **Dispatch** in `/todos` or by adding new work. Adding new work arms FIFO processing, including older queued items. Historical active items remain active and are never redispatched; manage them explicitly in `/todos`.
+Historical queued items remain visible but do not auto-dispatch merely because a session was started, resumed, reloaded, forked, or navigated with `/tree`. Re-enable processing by explicitly choosing **Dispatch** in `/todos` or by adding new work. Adding new work arms FIFO processing, including older queued items, without replacing an explicit pending **Dispatch** choice. Historical active items remain active and are never redispatched; manage them explicitly in `/todos`.
 
 ## Limits
 
@@ -83,7 +84,7 @@ Historical queued items remain visible but do not auto-dispatch merely because a
 | Sanitized text | 256 Unicode characters |
 | Tool list rows | 16 |
 | Sidebar DTO rows | 16 |
-| Completed history | 0 |
+| Completed items in actionable state | 0 |
 
 Terminal controls, ANSI/OSC sequences, C0/C1 controls, and bidi-control characters are removed before capture. Newlines and other whitespace are normalized to spaces. One submission remains one intent-preserving item; text is never heuristically split on words such as “and”.
 
@@ -99,19 +100,17 @@ When [`@neumie/pi-sidebar`](https://github.com/neumie/pi-sidebar) includes the o
 
 Ready/request replay makes package load order irrelevant. Snapshots contain exact session identity, a provider-instance ID, a monotonic sequence, aggregate queued/active totals, at most 16 `{ status, text }` display items, and an explicit omitted count. They contain no todo IDs, session file paths, messages, raw entries, errors, or completed work. The extension owns state; the sidebar owns layout and validates the full DTO independently.
 
-## Install from the private repository
+## Install
 
-Review the source, then install with GitHub access already configured:
+Requires **Pi 0.85.1 or newer within the 0.85.x series** and **Node.js 22.19.0 or newer**. Review the source, then install from GitHub:
 
 ```bash
-# SSH (recommended for a private repository)
-pi install git:git@github.com:neumie/pi-todo
-
-# Or authenticated HTTPS
 pi install git:https://github.com/neumie/pi-todo
 ```
 
-Pin a reviewed commit by appending `@<commit-sha>`. Restart Pi or run `/reload` after installation.
+Pin a reviewed commit by appending `@<commit-sha>`. Restart Pi or run `/reload` after installation. For a private fork, configure GitHub authentication or use `git:git@github.com:<owner>/pi-todo`.
+
+The queue and agent tool work without a sidebar or subagent package. Interactive queue management (`/todos`) requires Pi's terminal UI; custom dialogs are not available in RPC/print modes.
 
 For local development without changing package settings:
 
@@ -125,13 +124,25 @@ Like every Pi extension, this package executes in the Pi process with the user's
 
 The implementation deliberately uses a much narrower surface: session custom entries, lifecycle events, slash commands, one agent tool, local TUI APIs, `sendUserMessage`, and the in-process event bus. Runtime code requires no filesystem, network, shell, subprocess, environment-variable, credential, or external-service access. It does not modify Pi settings, trust decisions, installed packages, or peer extension state.
 
+### Data retention
+
+Todos are stored as plaintext custom entries in the Pi session file. **Complete** and **Delete** remove them from the actionable queue; they do not erase earlier text from that append-only file, its branches, copies, or backups. Avoid putting credentials or secrets in todos. Manage session-file retention separately.
+
+Captures do not enter model context automatically, but dispatched text and explicit `pi_todo list` results do. The optional in-process sidebar protocol also shares bounded todo text with other installed extensions. This is not a security boundary between extensions.
+
 ## Development
 
-Requires Pi 0.83.0 and Node.js 22.19 or newer.
-
 ```bash
-npm install --ignore-scripts
+npm ci --ignore-scripts
 npm run check
+npm audit
+npm pack --dry-run --ignore-scripts
 ```
 
-The package is marked private and cannot be published to npm accidentally.
+CI runs typechecks and tests on the minimum Node version and Node 24, audits dependencies, checks package contents, and scans Git history for secrets. The development SDK is pinned to Pi 0.85.1. Peer dependencies are bounded to the supported 0.85.x series; widen that range only after validating a newer SDK.
+
+Before a release, also smoke-test `/todo` while busy, explicit dispatch, completion, `/todos`, and session resume in an isolated interactive Pi session. Unit tests use a host API harness and do not substitute for that live check.
+
+## License and distribution
+
+[MIT](LICENSE). Distribution is through GitHub. `private: true` intentionally prevents accidental npm publication; it does not prevent a public GitHub repository or Git-based installation.
